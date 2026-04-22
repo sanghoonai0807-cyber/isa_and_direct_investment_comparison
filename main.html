@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>해외직투 vs ISA 절세 시뮬레이터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        input[type="range"] {
+            accent-color: #3b82f6;
+        }
+    </style>
+</head>
+
+<body class="p-4 md:p-8">
+    <div class="max-w-5xl mx-auto">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-slate-800 mb-2">해외직투 vs ISA 수익 비교 시뮬레이터</h1>
+            <p class="text-slate-500">투자 조건에 따른 세후 수익과 연금 전환 혜택을 시뮬레이션 하세요.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1 space-y-6">
+                <div class="card p-6 border border-slate-200">
+                    <h2 class="text-xl font-bold text-slate-700 mb-6 flex items-center">
+                        <span class="mr-2">⚙️</span> 투자 설정
+                    </h2>
+
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-2">초기 투자금 (만원)</label>
+                            <input type="number" id="initialAmount" value="1000"
+                                class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-2">매월 적립금 (만원)</label>
+                            <input type="number" id="monthlyAmount" value="100"
+                                class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-2">연평균 수익률 (%)</label>
+                            <input type="range" id="annualRateRange" min="1" max="30" value="8" class="w-full">
+                            <div class="text-right text-sm font-bold text-blue-600" id="annualRateLabel">8%</div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-2">투자 기간 (년)</label>
+                            <input type="range" id="yearsRange" min="3" max="40" value="10" class="w-full">
+                            <div class="text-right text-sm font-bold text-blue-600" id="yearsLabel">10년</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-6 border border-slate-200 bg-blue-50">
+                    <h2 class="text-xl font-bold text-slate-700 mb-4 flex items-center">
+                        <span class="mr-2">🏦</span> ISA & 연금 혜택
+                    </h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-2">ISA 유형</label>
+                            <select id="isaType" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                                <option value="200">일반형 (200만 원 공제)</option>
+                                <option value="400">서민형 (400만 원 공제)</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between py-2">
+                            <label class="text-sm font-semibold text-slate-600">연금저축계좌 이전</label>
+                            <input type="checkbox" id="pensionToggle" checked class="w-5 h-5 accent-blue-600">
+                        </div>
+                        <div id="pensionSection" class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-600 mb-1">이전 금액 (만원)</label>
+                                <input type="number" id="pensionAmount" value="3000"
+                                    class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-600 mb-1">세액공제율</label>
+                                <div class="flex gap-4">
+                                    <label class="flex items-center text-sm"><input type="radio" name="taxRate"
+                                            value="0.165" checked class="mr-1"> 16.5%</label>
+                                    <label class="flex items-center text-sm"><input type="radio" name="taxRate"
+                                            value="0.132" class="mr-1"> 13.2%</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="card p-6 bg-slate-800 text-white border-l-4 border-slate-400">
+                        <p class="text-slate-400 text-sm mb-1">해외 직접 투자 (세후)</p>
+                        <h3 class="text-2xl font-bold" id="directFinalResult">₩ 0</h3>
+                        <p class="text-xs text-slate-400 mt-2">연 250만 원 공제 적용</p>
+                    </div>
+                    <div class="card p-6 bg-blue-700 text-white border-l-4 border-blue-400">
+                        <p class="text-blue-200 text-sm mb-1">ISA + 연금전환 (세후)</p>
+                        <h3 class="text-2xl font-bold" id="isaFinalResult">₩ 0</h3>
+                        <p class="text-xs text-blue-200 mt-2" id="winnerBadge">계산 중...</p>
+                    </div>
+                </div>
+
+                <div class="card p-6 border border-slate-200">
+                    <h3 class="font-bold text-slate-700 mb-4 text-center">세후 최종 자산 비교</h3>
+                    <div class="h-64">
+                        <canvas id="comparisonChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card border border-slate-200 overflow-hidden text-sm">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th class="p-4 font-bold text-slate-700">항목</th>
+                                <th class="p-4 font-bold text-slate-700 text-right">해외 직투</th>
+                                <th class="p-4 font-bold text-blue-700 text-right">ISA + 연금</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 text-slate-600">
+                            <tr>
+                                <td class="p-4">총 납입 원금</td>
+                                <td class="p-4 text-right" id="tablePrincipal">0</td>
+                                <td class="p-4 text-right" id="tablePrincipalISA">0</td>
+                            </tr>
+                            <tr>
+                                <td class="p-4">세전 총 수익</td>
+                                <td class="p-4 text-right font-semibold" id="tableGrossProfit">0</td>
+                                <td class="p-4 text-right font-semibold" id="tableGrossProfitISA">0</td>
+                            </tr>
+                            <tr>
+                                <td class="p-4">예상 세금</td>
+                                <td class="p-4 text-right text-red-500" id="tableTaxDirect">0</td>
+                                <td class="p-4 text-right text-red-500" id="tableTaxISA">0</td>
+                            </tr>
+                            <tr>
+                                <td class="p-4">연금 전환 세액공제 혜택</td>
+                                <td class="p-4 text-right text-slate-400">-</td>
+                                <td class="p-4 text-right text-emerald-600 font-bold" id="tablePensionRefund">0</td>
+                            </tr>
+                            <tr class="bg-blue-50/50">
+                                <td class="p-4 font-bold text-slate-800">최종 세후 자산</td>
+                                <td class="p-4 text-right font-bold text-slate-800" id="tableNetAssetDirect">0</td>
+                                <td class="p-4 text-right font-bold text-blue-700" id="tableNetAssetISA">0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('comparisonChart').getContext('2d');
+        let chart;
+
+        function formatKRW(val) {
+            return '₩ ' + Math.round(val).toLocaleString();
+        }
+
+        function calculate() {
+            // 입력값
+            const P0 = parseFloat(document.getElementById('initialAmount').value) * 10000;
+            const M = parseFloat(document.getElementById('monthlyAmount').value) * 10000;
+            const r = parseFloat(document.getElementById('annualRateRange').value);
+            const n = parseInt(document.getElementById('yearsRange').value);
+            const isaDeduction = parseInt(document.getElementById('isaType').value) * 10000;
+            const isPensionOn = document.getElementById('pensionToggle').checked;
+            const pensionAmountInput = parseFloat(document.getElementById('pensionAmount').value) * 10000;
+            const taxRate = parseFloat(document.querySelector('input[name="taxRate"]:checked').value);
+
+            // 레이블 업데이트
+            document.getElementById('annualRateLabel').innerText = r + '%';
+            document.getElementById('yearsLabel').innerText = n + '년';
+            document.getElementById('pensionSection').style.opacity = isPensionOn ? '1' : '0.4';
+
+            // 계산 로직
+            const r_m = r / 100 / 12;
+            const t = n * 12;
+
+            // 최종 자산 (세전)
+            const fv_initial = P0 * Math.pow(1 + r / 100, n);
+            const fv_monthly = M * ((Math.pow(1 + r_m, t) - 1) / r_m) * (1 + r_m);
+            const totalGrossAsset = fv_initial + fv_monthly;
+            const totalPrincipal = P0 + (M * t);
+            const totalProfit = totalGrossAsset - totalPrincipal;
+
+            // 1. 해외 직투 세금 (매년 250만 원 공제 Harvest 가정)
+            const directTax = Math.max(0, totalProfit - (n * 2500000)) * 0.22;
+            const directNetAsset = totalGrossAsset - directTax;
+
+            // 2. ISA 세금 (만기 일시 공제 및 9.9% 분리과세)
+            const isaTax = Math.max(0, totalProfit - isaDeduction) * 0.099;
+            const baseISANetAsset = totalGrossAsset - isaTax;
+
+            // 연금 전환 혜택
+            let pensionRefund = 0;
+            if (isPensionOn) {
+                const pensionLimit = 3000000; // 최대 300만 원 한도 (이전액의 10%)
+                const creditTarget = Math.min(pensionAmountInput * 0.1, pensionLimit);
+                pensionRefund = creditTarget * taxRate;
+            }
+            const isaFinalAsset = baseISANetAsset + pensionRefund;
+
+            // UI 업데이트
+            document.getElementById('directFinalResult').innerText = formatKRW(directNetAsset);
+            document.getElementById('isaFinalResult').innerText = formatKRW(isaFinalAsset);
+
+            const gap = isaFinalAsset - directNetAsset;
+            const winnerText = gap > 0
+                ? `해외직투 대비 ${formatKRW(gap)} 더 유리`
+                : `해외직투가 ${formatKRW(Math.abs(gap))} 더 유리`;
+            document.getElementById('winnerBadge').innerText = winnerText;
+
+            // 테이블 업데이트
+            document.getElementById('tablePrincipal').innerText = formatKRW(totalPrincipal);
+            document.getElementById('tablePrincipalISA').innerText = formatKRW(totalPrincipal);
+            document.getElementById('tableGrossProfit').innerText = formatKRW(totalProfit);
+            document.getElementById('tableGrossProfitISA').innerText = formatKRW(totalProfit);
+            document.getElementById('tableTaxDirect').innerText = '- ' + formatKRW(directTax);
+            document.getElementById('tableTaxISA').innerText = '- ' + formatKRW(isaTax);
+            document.getElementById('tablePensionRefund').innerText = '+ ' + formatKRW(pensionRefund);
+            document.getElementById('tableNetAssetDirect').innerText = formatKRW(directNetAsset);
+            document.getElementById('tableNetAssetISA').innerText = formatKRW(isaFinalAsset);
+
+            updateChart(directNetAsset, isaFinalAsset);
+        }
+
+        function updateChart(direct, isa) {
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['해외 직접 투자', 'ISA + 연금 전환'],
+                    datasets: [{
+                        data: [direct, isa],
+                        backgroundColor: ['#64748b', '#2563eb'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: value => value / 100000000 + '억' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 이벤트 리스너
+        const inputs = ['initialAmount', 'monthlyAmount', 'annualRateRange', 'yearsRange', 'isaType', 'pensionToggle', 'pensionAmount'];
+        inputs.forEach(id => document.getElementById(id).addEventListener('input', calculate));
+        document.querySelectorAll('input[name="taxRate"]').forEach(el => el.addEventListener('change', calculate));
+
+        // 초기 실행
+        calculate();
+    </script>
+</body>
+
+</html>
