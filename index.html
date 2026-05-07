@@ -168,35 +168,52 @@
         let chart;
 
         function formatKRW(val) {
+            if (!isFinite(val)) val = 0;
             return '₩ ' + Math.round(val).toLocaleString();
         }
 
+        // NaN/음수 방어용 숫자 파서 (음수 → 0, NaN → defaultVal)
+        function safeNum(elId, defaultVal = 0, allowNegative = false) {
+            const v = parseFloat(document.getElementById(elId).value);
+            if (isNaN(v)) return defaultVal;
+            return allowNegative ? v : Math.max(0, v);
+        }
+        function safeInt(elId, defaultVal = 0) {
+            const v = parseInt(document.getElementById(elId).value);
+            return isNaN(v) ? defaultVal : Math.max(0, v);
+        }
+
         function calculate() {
-            // 입력값
-            const P0 = parseFloat(document.getElementById('initialAmount').value) * 10000;
-            const M = parseFloat(document.getElementById('monthlyAmount').value) * 10000;
-            const r = parseFloat(document.getElementById('annualRateRange').value);
-            const n = parseInt(document.getElementById('yearsRange').value);
+            // 입력값 (NaN/음수 방어)
+            const P0 = safeNum('initialAmount', 0) * 10000;
+            const M = safeNum('monthlyAmount', 0) * 10000;
+            const r = safeNum('annualRateRange', 8);
+            const n = safeInt('yearsRange', 10);
             const isaDeduction = parseInt(document.getElementById('isaType').value) * 10000;
             const isPensionOn = document.getElementById('pensionToggle').checked;
-            const pensionAmountInput = parseFloat(document.getElementById('pensionAmount').value) * 10000;
+            const pensionAmountInputRaw = safeNum('pensionAmount', 0) * 10000;
             const taxRate = parseFloat(document.querySelector('input[name="taxRate"]:checked').value);
 
             // 레이블 업데이트
             document.getElementById('annualRateLabel').innerText = r + '%';
             document.getElementById('yearsLabel').innerText = n + '년';
             document.getElementById('pensionSection').style.opacity = isPensionOn ? '1' : '0.4';
+            // 토글 OFF 시 연금 관련 입력 필드 비활성화
+            document.getElementById('pensionAmount').disabled = !isPensionOn;
+            document.querySelectorAll('input[name="taxRate"]').forEach(el => el.disabled = !isPensionOn);
 
             // 계산 로직
             const r_m = r / 100 / 12;
             const t = n * 12;
 
-            // 최종 자산 (세전)
+            // 최종 자산 (세전) - r=0 일 때 division-by-zero 방지
             const fv_initial = P0 * Math.pow(1 + r / 100, n);
-            const fv_monthly = M * ((Math.pow(1 + r_m, t) - 1) / r_m) * (1 + r_m);
+            const fv_monthly = (r_m === 0)
+                ? M * t
+                : M * ((Math.pow(1 + r_m, t) - 1) / r_m) * (1 + r_m);
             const totalGrossAsset = fv_initial + fv_monthly;
             const totalPrincipal = P0 + (M * t);
-            const totalProfit = totalGrossAsset - totalPrincipal;
+            const totalProfit = Math.max(0, totalGrossAsset - totalPrincipal);
 
             // 1. 해외 직투 세금 (매년 250만 원 공제 Harvest 가정)
             const directTax = Math.max(0, totalProfit - (n * 2500000)) * 0.22;
@@ -206,10 +223,11 @@
             const isaTax = Math.max(0, totalProfit - isaDeduction) * 0.099;
             const baseISANetAsset = totalGrossAsset - isaTax;
 
-            // 연금 전환 혜택
+            // 연금 전환 혜택 (이전금이 ISA 만기자산을 초과할 수 없음)
             let pensionRefund = 0;
-            if (isPensionOn) {
-                const pensionLimit = 3000000; // 최대 300만 원 한도 (이전액의 10%)
+            let pensionAmountInput = Math.min(pensionAmountInputRaw, baseISANetAsset);
+            if (isPensionOn && pensionAmountInput > 0) {
+                const pensionLimit = 3000000; // 추가 세액공제 최대 한도 (이전액의 10%, 최대 300만원)
                 const creditTarget = Math.min(pensionAmountInput * 0.1, pensionLimit);
                 pensionRefund = creditTarget * taxRate;
             }
@@ -220,9 +238,14 @@
             document.getElementById('isaFinalResult').innerText = formatKRW(isaFinalAsset);
 
             const gap = isaFinalAsset - directNetAsset;
-            const winnerText = gap > 0
-                ? `해외직투 대비 ${formatKRW(gap)} 더 유리`
-                : `해외직투가 ${formatKRW(Math.abs(gap))} 더 유리`;
+            let winnerText;
+            if (Math.abs(gap) < 1) {
+                winnerText = '해외직투와 동일한 수준';
+            } else if (gap > 0) {
+                winnerText = `해외직투 대비 ${formatKRW(gap)} 더 유리`;
+            } else {
+                winnerText = `해외직투가 ${formatKRW(Math.abs(gap))} 더 유리`;
+            }
             document.getElementById('winnerBadge').innerText = winnerText;
 
             // 테이블 업데이트
